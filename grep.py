@@ -28,11 +28,12 @@ def check_entry(pattern, line, ignore_case=False):
 def grep(lines, params):
     count = 0
     last_index = -1
-
+    pattern = params.pattern
     for index, line in enumerate(lines):
 
         # Проверка на совпадение, включая возможный инверт
-        if check_entry(params.pattern, line, params.ignore_case) != params.invert:
+        if check_entry(pattern, line, params.ignore_case) != params.invert:
+
             if not params.count:
 
                 # Определение контекста
@@ -43,7 +44,7 @@ def grep(lines, params):
                     if params.line_number:
 
                         # Исключение для случаев, когда есть контекст и необходимо напечать номер
-                        if check_entry(params.pattern, lines[i], params.ignore_case):
+                        if check_entry(pattern, lines[i], params.ignore_case):
                             output(str(i + 1) + ":" + lines[i])
                             last_index = i
                         else:
