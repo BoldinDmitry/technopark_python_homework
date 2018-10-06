@@ -9,7 +9,7 @@ def output(line):
 
 def check_entry(pattern, line, ignore_case=False):
     """
-    Фунция для проерки нахождения шаблона в строке
+    Фунция для проерки нахождения шаблона в строке, может игнорировать регистр
     :param ignore_case: игнорировать регистр
     :param pattern: шаблон вхождения
     :param line: строка
