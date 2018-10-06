@@ -7,14 +7,18 @@ def output(line):
     print(line)
 
 
-def check_entry(pattern, line):
+def check_entry(pattern, line, ignore_case=False):
     """
     Фунция для проерки нахождения шаблона в строке
-
+    :param ignore_case: игнорировать регистр
     :param pattern: шаблон вхождения
     :param line: строка
     :return: bool переменную, True, если совпадение
     """
+    if ignore_case:
+        pattern = pattern.lower()
+        line = line.lower()
+
     pattern = pattern.replace("?", ".")
     pattern = pattern.replace("*", "\w*")
 
@@ -22,46 +26,41 @@ def check_entry(pattern, line):
 
 
 def grep(lines, params):
-    final_indexes = []
-    for index, line in enumerate(lines):
-        line = line.rstrip()
+    count = 0
+    last_index = -1
 
-        # Применения ignore_case
-        if params.ignore_case:
-            line = line.lower()
-            params.pattern = params.pattern.lower()
+    for index, line in enumerate(lines):
 
         # Проверка на совпадение, включая возможный инверт
-        if check_entry(params.pattern, line) != params.invert:
-            final_indexes.append(index)
+        if check_entry(params.pattern, line, params.ignore_case) != params.invert:
+
+            if not params.count:
+
+                # Определение контекста
+                start = max(0, index - params.before_context - params.context, last_index + 1)
+                stop = min(len(lines), index + params.after_context + params.context + 1)
+
+                for i in range(start, stop):
+                    if params.line_number:
+
+                        # Исключение для случаев, когда есть контекст и необходимо напечать номер
+                        if check_entry(params.pattern, lines[i], params.ignore_case):
+                            output(str(i + 1) + ":" + lines[i])
+                            last_index = i
+                        else:
+                            output(str(i + 1) + "-" + lines[i])
+                            last_index = i
+
+                    else:
+                        output(lines[i])
+                        last_index = i
+
+            else:
+                count += 1
 
     # Искоючение для случаев, когда нужно показать только колличество совпадений
     if params.count:
-        output(str(len(final_indexes)))
-    else:
-        # Переменная, чтобы не было пересечения
-        last_index = -1
-
-        # Итерация по всем индексам, совпавших элементов
-        for index in final_indexes:
-
-            # Определение контекста
-            start = max(0, index - params.before_context - params.context, last_index+1)
-            stop = min(len(lines), index + params.after_context + params.context + 1)
-
-            for i in range(start, stop):
-                if params.line_number:
-
-                    # Исключение для случаев, когда есть контекст и необходимо напечать номер
-                    if i in final_indexes:
-                        output(str(i + 1) + ":" + lines[i])
-                        last_index = i
-                    else:
-                        output(str(i + 1) + "-" + lines[i])
-                        last_index = i
-                else:
-                    output(lines[i])
-                    last_index = i
+        output(str(count))
 
 
 def parse_args(args):
