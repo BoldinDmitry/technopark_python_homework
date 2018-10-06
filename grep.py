@@ -33,7 +33,6 @@ def grep(lines, params):
 
         # Проверка на совпадение, включая возможный инверт
         if check_entry(params.pattern, line, params.ignore_case) != params.invert:
-
             if not params.count:
 
                 # Определение контекста
