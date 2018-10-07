@@ -1,6 +1,7 @@
 import argparse
 import sys
 import re
+from collections import deque
 
 
 def output(line):
@@ -25,53 +26,60 @@ def check_entry(pattern, line, ignore_case=False):
     return re.search(pattern, line) is not None
 
 
+def iterator(q):
+    while True:
+        try:
+            yield q.popleft()
+        except IndexError:
+            break
+
+
 def grep(lines, params):
     count = 0
-    last_index = -1
     pattern = params.pattern
-    future_indexes = []
+
+    before_context = params.context + params.before_context + 1
+    after_context = params.context + params.after_context
+
+    context_lines = deque(maxlen=before_context)
+    after_output = 0
+
     for index, line in enumerate(lines):
+
+        context_lines.append(line)
+
         # Проверка на совпадение, включая возможный инверт
         if check_entry(pattern, line, params.ignore_case) != params.invert:
 
             if not params.count:
-
-                # Определение контекста
-                start = max(0, index - params.before_context - params.context, last_index + 1)
-                stop = min(len(lines), index + params.after_context + params.context + 1)
-
-                if stop > index:
-                    future_indexes.extend([j for j in range(index, stop)])
-
-                for i in range(start, index+1):
-
+                i = 0
+                length = len(context_lines)
+                for context_line in iterator(context_lines):
                     if params.line_number:
-
-                        # Исключение для случаев, когда есть контекст и необходимо напечать номер
-                        if check_entry(pattern, lines[i], params.ignore_case):
-                            output(str(i + 1) + ":" + lines[i])
-                            last_index = i
+                        if context_line == line:
+                            output(str(index-length+i+2) + ":" + context_line)
                         else:
-                            output(str(i + 1) + "-" + lines[i])
-                            last_index = i
+                            output(str(index-length+i+2) + "-" + context_line)
 
                     else:
-                        output(lines[i])
-                        last_index = i
+                        output(context_line)
+                    i += 1
+
+                context_lines.clear()
+                after_output = after_context
 
             else:
                 count += 1
 
-        # Исключение для контекстных индексов
-        elif index in future_indexes:
+        elif after_output > 0:
             if params.line_number:
-                output(str(index + 1) + "-" + line)
-                future_indexes.remove(index)
-                last_index = index
+                output(str(index+1) + "-" + line)
+                after_output -= 1
+                context_lines.clear()
             else:
                 output(line)
-                future_indexes.remove(index)
-                last_index = index
+                after_output -= 1
+                context_lines.clear()
 
     # Искоючение для случаев, когда нужно показать только колличество совпадений
     if params.count:
