@@ -29,8 +29,8 @@ def grep(lines, params):
     count = 0
     last_index = -1
     pattern = params.pattern
+    future_indexes = []
     for index, line in enumerate(lines):
-
         # Проверка на совпадение, включая возможный инверт
         if check_entry(pattern, line, params.ignore_case) != params.invert:
 
@@ -40,7 +40,11 @@ def grep(lines, params):
                 start = max(0, index - params.before_context - params.context, last_index + 1)
                 stop = min(len(lines), index + params.after_context + params.context + 1)
 
-                for i in range(start, stop):
+                if stop > index:
+                    future_indexes.extend([j for j in range(index, stop)])
+
+                for i in range(start, index+1):
+
                     if params.line_number:
 
                         # Исключение для случаев, когда есть контекст и необходимо напечать номер
@@ -57,6 +61,16 @@ def grep(lines, params):
 
             else:
                 count += 1
+
+        elif index in future_indexes:
+            if params.line_number:
+                output(str(index + 1) + "-" + line)
+                future_indexes.remove(index)
+                last_index = index
+            else:
+                output(line)
+                future_indexes.remove(index)
+                last_index = index
 
     # Искоючение для случаев, когда нужно показать только колличество совпадений
     if params.count:
