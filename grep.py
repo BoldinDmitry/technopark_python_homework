@@ -62,6 +62,7 @@ def grep(lines, params):
             else:
                 count += 1
 
+        # Исключение для контекстных индексов
         elif index in future_indexes:
             if params.line_number:
                 output(str(index + 1) + "-" + line)
