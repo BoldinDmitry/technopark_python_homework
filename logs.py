@@ -74,19 +74,13 @@ def parse(
 
     for log in pretty_logs:
 
-        if log["request"] not in ignore_urls:
-            not_in_ignore_urls = True
-        else:
+        if log["request"] in ignore_urls:
             continue
 
-        if not ignore_files or ("." not in log["request"].split("/")[-1]):
-            is_file = True
-        else:
+        if not (not ignore_files or ("." not in log["request"].split("/")[-1])):
             continue
 
-        if (log["request_type"] == request_type) or not request_type:
-            right_request_type = True
-        else:
+        if not ((log["request_type"] == request_type) or not request_type):
             continue
 
         # Определние интервала поиска во времени
@@ -96,7 +90,7 @@ def parse(
         if stop_at is not None:
             start_stop *= log["request_date"] <= stop_at
 
-        if not_in_ignore_urls and is_file and right_request_type and start_stop:
+        if start_stop:
 
             logs_count[log["request"]] += 1
 
@@ -105,12 +99,11 @@ def parse(
 
     if logs_count:
         if slow_queries:
-            average = []
-            for i in mil_counter.keys():
-                average.append(mil_counter[i]//logs_count[i])
-            return sorted(average, reverse=True)[:5]
 
-        for_return = list(i[1] for i in logs_count.most_common(5))
-        return for_return
+            for i in mil_counter.keys():
+                mil_counter[i] //= logs_count[i]
+            return [i[1] for i in mil_counter.most_common(5)]
+
+        return [i[1] for i in logs_count.most_common(5)]
     else:
         return []
