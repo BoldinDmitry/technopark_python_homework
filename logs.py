@@ -1,6 +1,8 @@
-from datetime import datetime
 import re
 import collections
+
+from urllib.parse import urlparse
+from datetime import datetime
 
 
 def parse_log(log, ignore_www):
@@ -13,14 +15,17 @@ def parse_log(log, ignore_www):
     cleared_log = log.strip("\n")
     splited_log = cleared_log.split()
 
-    request = splited_log[3].replace("www.", "") if ignore_www else splited_log[3]
-    request = request.split("?")[0]
+    request = urlparse(splited_log[3])
+    # Не использую стандартное проебразование к урлу, тк нужно будет потом удалять http\w?://
+    request = "{}{}".format(request.netloc, request.path)
+    if ignore_www and request.startswith("www."):
+        request = request[4:]
 
     date_str = (splited_log[0] + " " + splited_log[1]).strip('[]')
     return {
         "request_date": datetime.strptime(date_str, "%d/%b/%Y %H:%M:%S"),
         "request_type": splited_log[2].strip('"'),
-        "request": re.sub(r'http\w?://', '', request),
+        "request": request,
         "protocol": splited_log[4].strip('"'),
         "response_code": int(splited_log[5]),
         "response_time": int(splited_log[6])
@@ -53,7 +58,9 @@ def parse(
         slow_queries=False
 ):
     if ignore_urls is None:
-        ignore_urls = []
+        ignore_urls = {}
+    else:
+        ignore_urls = set(ignore_urls)
 
     if start_at is not None:
         start_at = datetime.strptime(start_at, "%d/%b/%Y %H:%M:%S")
@@ -67,19 +74,27 @@ def parse(
 
     for log in pretty_logs:
 
-        not_in_ignore_urls = log["request"] not in ignore_urls
-        is_file = not ignore_files or ("." not in log["request"].split("/")[-1])
-        right_request_type = (log["request_type"] == request_type) or not request_type
+        if log["request"] not in ignore_urls:
+            not_in_ignore_urls = True
+        else:
+            continue
+
+        if not ignore_files or ("." not in log["request"].split("/")[-1]):
+            is_file = True
+        else:
+            continue
+
+        if (log["request_type"] == request_type) or not request_type:
+            right_request_type = True
+        else:
+            continue
 
         # Определние интервала поиска во времени
-        if start_at is not None and stop_at is not None:
-            start_stop = start_at <= log["request_date"] <= stop_at
-        elif start_at is not None:
-            start_stop = start_at <= log["request_date"]
-        elif stop_at is not None:
-            start_stop = log["request_date"] <= stop_at
-        else:
-            start_stop = True
+        start_stop = 1
+        if start_at is not None:
+            start_stop *= start_at <= log["request_date"]
+        if stop_at is not None:
+            start_stop *= log["request_date"] <= stop_at
 
         if not_in_ignore_urls and is_file and right_request_type and start_stop:
 
@@ -87,15 +102,13 @@ def parse(
 
             if slow_queries:
                 mil_counter[log["request"]] += log["response_time"]
+
     if logs_count:
         if slow_queries:
-            mil_counter = mil_counter.most_common(5)
-            for_return = []
-            for i in range(5):
-                for_return.append(
-                    mil_counter[i][1] // logs_count[mil_counter[i][0]]
-                )
-            return sorted(for_return, reverse=True)
+            average = []
+            for i in mil_counter.keys():
+                average.append(mil_counter[i]//logs_count[i])
+            return sorted(average, reverse=True)[:5]
 
         for_return = list(i[1] for i in logs_count.most_common(5))
         return for_return
