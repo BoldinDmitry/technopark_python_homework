@@ -166,7 +166,7 @@ class TextHistory:
                         delete_start_in_insert = insert_start_pos <= delete_start_pos <= insert_end_pos
                         delete_end_in_insert = insert_start_pos <= delete_end_pos <= insert_end_pos
 
-                        if delete_start_in_insert or delete_end_in_insert:
+                        if delete_start_in_insert and delete_end_in_insert:
                             start = max(insert_start_pos, delete_start_pos)
                             s = min(insert_start_pos, delete_start_pos)
 
