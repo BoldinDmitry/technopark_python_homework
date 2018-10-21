@@ -97,6 +97,75 @@ class TextHistory:
 
         return self._version
 
+    def _insert_delete_optimization(self, current_object, next_object):
+        """
+        Оптимизация для объектов Insert и Delete
+        :param current_object: Текущий объект в итерации
+        :param next_object: Следующий объект в итерации
+        :return: Объект InsertAction или None
+        """
+        insert_start_pos = current_object.pos
+        insert_end_pos = len(current_object.text)
+        delete_start_pos = next_object.pos
+        delete_end_pos = next_object.pos + next_object.length
+
+        delete_start_in_insert = insert_start_pos <= delete_start_pos <= insert_end_pos
+        delete_end_in_insert = insert_start_pos <= delete_end_pos <= insert_end_pos
+
+        if delete_start_in_insert or delete_end_in_insert:
+            start = max(insert_start_pos, delete_start_pos)
+            s = min(insert_start_pos, delete_start_pos)
+
+            end = min(insert_end_pos, delete_end_pos)
+
+            new_text = current_object.text.replace(current_object.text[start - s:end - s], "")
+
+            return InsertAction(
+                text=new_text,
+                pos=current_object.pos,
+                from_version=current_object.from_version,
+                to_version=next_object.to_version
+            )
+
+    def _double_insert_optimization(self, current_object, next_object):
+        """
+        Оптимизация для двух объектов InsertAction
+        :param current_object: Текущий объект в итерации
+        :param next_object: Следующий объект в итерации
+        :return: Объект InsertAction или None, если оптимизацию применить невозможно
+        """
+        if current_object.pos + len(current_object.text) - next_object.pos == 0:
+            return InsertAction(
+                text=current_object.text + next_object.text,
+                pos=current_object.pos,
+                from_version=current_object.from_version,
+                to_version=next_object.to_version
+            )
+
+    def _make_optimization(self, current_object, next_object):
+        """
+        Применяет оптимизации к двум объектам, если это возможно
+        :param current_object: Текущий объект в итерации
+        :param next_object: Следующий объект в итерации
+        :return: оптимизацию, если ее возможно сделать, иначе None
+        """
+        current_is_insert = isinstance(current_object, InsertAction)
+        next_is_insert = isinstance(next_object, InsertAction)
+        for_return = None
+        if current_is_insert and next_is_insert:
+            optimization = self._double_insert_optimization(current_object, next_object)
+            if optimization is not None:
+                for_return = optimization
+
+        next_is_delete = isinstance(next_object, DeleteAction)
+
+        if current_is_insert and next_is_delete:
+            optimization = self._insert_delete_optimization(current_object, next_object)
+            if optimization is not None:
+                for_return = optimization
+
+        return for_return
+
     def _next_action(self, from_version, to_version):
         from_version = from_version + 1
         to_version = to_version
@@ -136,61 +205,22 @@ class TextHistory:
                 current_object = self._actions_list[i + 1]
 
                 if i != to_version - 1:
+
                     next_index = next(n)
                     next_object = self._actions_list[next_index + 1]
 
-                    current_is_insert = isinstance(current_object, InsertAction)
-                    next_is_insert = isinstance(next_object, InsertAction)
-
-                    if current_is_insert and next_is_insert:
-                        if current_object.pos + len(current_object.text) - next_object.pos == 0:
-                            for_return.append(
-                                InsertAction(
-                                    text=current_object.text + next_object.text,
-                                    pos=current_object.pos,
-                                    from_version=current_object.from_version,
-                                    to_version=next_object.to_version
-                                )
-                            )
-                            do_nothing = True
-                            continue
-
-                    next_is_delete = isinstance(next_object, DeleteAction)
-                    if current_is_insert and next_is_delete:
-
-                        insert_start_pos = current_object.pos
-                        insert_end_pos = len(current_object.text)
-                        delete_start_pos = next_object.pos
-                        delete_end_pos = next_object.pos + next_object.length
-
-                        delete_start_in_insert = insert_start_pos <= delete_start_pos <= insert_end_pos
-                        delete_end_in_insert = insert_start_pos <= delete_end_pos <= insert_end_pos
-
-                        if delete_start_in_insert and delete_end_in_insert:
-                            start = max(insert_start_pos, delete_start_pos)
-                            s = min(insert_start_pos, delete_start_pos)
-
-                            end = min(insert_end_pos, delete_end_pos)
-
-                            new_text = current_object.text.replace(current_object.text[start-s:end-s], "")
-
-                            for_return.append(
-                                InsertAction(
-                                    text=new_text,
-                                    pos=current_object.pos,
-                                    from_version=current_object.from_version,
-                                    to_version=next_object.to_version
-                                )
-                            )
-                            do_nothing = True
-                            continue
+                    optimization = self._make_optimization(current_object, next_object)
+                    if optimization is not None:
+                        for_return.append(optimization)
+                        do_nothing = True
+                        continue
 
                 for_return.append(current_object)
 
         return for_return
 
     def __repr__(self):
-        return "TextHistory({}, {})".format(self._text, self._version)
+        return "TextHistory({!r}, {!r})".format(self._text, self._version)
 
 
 class Action:
