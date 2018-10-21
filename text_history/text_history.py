@@ -97,7 +97,8 @@ class TextHistory:
 
         return self._version
 
-    def _insert_delete_optimization(self, current_object, next_object):
+    @staticmethod
+    def _insert_delete_optimization(current_object, next_object):
         """
         Оптимизация для объектов Insert и Delete
         :param current_object: Текущий объект в итерации
@@ -127,7 +128,8 @@ class TextHistory:
                 to_version=next_object.to_version
             )
 
-    def _double_insert_optimization(self, current_object, next_object):
+    @staticmethod
+    def _double_insert_optimization(current_object, next_object):
         """
         Оптимизация для двух объектов InsertAction
         :param current_object: Текущий объект в итерации
