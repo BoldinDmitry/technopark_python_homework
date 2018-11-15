@@ -3,7 +3,9 @@ import types
 
 
 def print_working_time(func, klass=None):
-    print(func.__name__ + " started")
+    class_name = "" if klass is None else klass.__name__ + "."
+
+    print("{}{} started".format(class_name, func.__name__))
     started = time.time()
 
     if klass is None:
@@ -12,7 +14,7 @@ def print_working_time(func, klass=None):
         func(klass)
 
     finished = time.time() - started
-    print(func.__name__ + " finished in " + str(finished))
+    print("{}{} finished in {}".format(class_name, func.__name__, finished))
 
 
 def profile(func):
