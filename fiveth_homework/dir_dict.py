@@ -5,7 +5,7 @@ import os
 class DirDict(collections.MutableMapping):
     def __init__(self, path):
         if not os.path.exists(path):
-            raise NotADirectoryError
+            raise NotADirectoryError()
 
         self.path = path
         self.all_files = []
