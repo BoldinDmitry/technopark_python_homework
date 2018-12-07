@@ -1,0 +1,4 @@
+directory: "directory/faces"
+port: 8081
+servers:
+  - "http://0.0.0.0:8080"
