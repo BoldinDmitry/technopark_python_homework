@@ -41,28 +41,18 @@ class Server:
                 return web.Response(text=file_text)
         return web.Response(status=404)
 
-    async def get(self, url):
+    async def get(self, _server, _file_name):
         """
-        Запрос файла по ссылке
-        :param url: ссылка на файл
-        :return: Содержимое файла или None
+        Получение информации о файле с сервера
+        :param _server: сервер
+        :param _file_name: имя файла
+        :return: содержание файла или None
         """
+        url = "/".join([_server, "local", _file_name])
         async with ClientSession() as session:
             async with session.get(url) as resp:
                 if resp.status == 200:
                     return await resp.text()
-
-    async def make_request(self, server, file_name):
-        """
-        Сборка url'a и вызов get для получения содержимого файла с сервера
-        :param server: Сервер
-        :param file_name: Имя файла
-        :return: Содержимое файла или None
-        """
-        url = "/".join([server, "local", file_name])
-        data = await self.get(url)
-
-        return data
 
     async def get_remote_information(self, file_name):
         """
@@ -73,7 +63,7 @@ class Server:
         tasks = []
 
         for server in self.servers:
-            tasks.append(self.make_request(server, file_name))
+            tasks.append(self.get(server, file_name))
 
         file_data, _ = await asyncio.wait(tasks)
 
