@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block content%}
+<h2>Список тем</h2>
+<h4><a href = '?sorted_by=-creation_date'>Сортировать по времени добавления</a></h4>
+<h4><a href = '?sorted_by=-views_count'>Сортировать по колличеству просмотров</a></h4>
+<ul>
+    <form method="GET" action="" id="searchform">
+    <input class="searchfield" id="searchbox" name="title" type="text" value="{{ request.GET.title }}" placeholder="Найти по заголовоку"/>
+</form>
+
+	{% for post in posts %}
+		<li><a href="/post/{{ post.pk }}">{{ post.title }}</a></li>
+	{% endfor %}
+</ul>
+
+{% endblock %}
