@@ -60,7 +60,7 @@ class Creation(CreateView, ABC):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         _model = self.form_class.Meta.model
-        _model_name = _model._meta.verbose_name
+        _model_name = _model().readable_name
         context['model_name'] = _model_name.lower()
         return context
 
